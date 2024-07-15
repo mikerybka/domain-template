@@ -1,0 +1,43 @@
+version: '3.9'
+
+services:
+
+  db:
+    image: postgres
+    restart: always
+    shm_size: 128mb
+    environment:
+      POSTGRES_PASSWORD: password
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - /root/data/db:/var/lib/postgresql/data
+
+  app:
+    depends_on: 
+        postgres: 
+          condition: service_healthy
+      environment: 
+        NC_DB: pg://db:5432?u=postgres&p=password&d=app
+      image: nocodb/nocodb:latest
+      restart: always
+      volumes: 
+        - "/root/data/media:/usr/app/data"
+
+    image: mikerybka/schema-cafe
+    environment:
+      PG_URL: postgres://postgres:password@db:5432/schema-cafe
+    volumes:
+      - /root/data/app:/root/data/app
+
+  gateway:
+    image: caddy:latest
+    restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - /root/Caddyfile:/etc/caddy/Caddyfile
+      - /root/data/caddy:/data
